@@ -124,12 +124,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 
   <section id="s4" hidden>
     <h2><span class="n">4</span>保存</h2>
-    <button id="savepdf" class="big">印刷用PDFを保存（A4の上半分）</button>
-    <p class="hint">保存すると表示される共有メニューの「プリント（印刷）」から、そのまま印刷できます。A4用紙の上半分に印刷されます。</p>
+    <button id="savepdf" class="big">印刷用PDFを保存（A4）</button>
+    <p class="hint">A4サイズ（元のExcelと同じレイアウト）で作成されます。印刷するときに、プリンタの設定で半分の大きさ（縮小・2面付けなど）にしてください。</p>
     <div id="result" class="resbox" hidden></div>
-    <label class="optline" style="margin-top:16px"><input id="f_half" type="checkbox" checked>Excelも上半分サイズにする</label>
+    
     <button id="save" class="big alt">Excelを保存する</button>
-    <p class="hint">Excelの場合は、保存したファイルをExcelアプリで開いて印刷します（拡大縮小は「なし」のままにしてください）。</p>
+    <p class="hint">Excelは、保存したファイルをExcelアプリで開いて印刷します。</p>
   </section>
 
   <p class="foot">患者さんの情報はこの画面の中だけで処理され、保存・送信されません（端末に記憶されるのは、在庫リスト・薬剤師名簿・医師名の対応表・メーカー名だけです）。</p>
@@ -10828,7 +10828,7 @@ function gather(){
   var items=S.items.filter(function(i){return i.include;}).slice(0,5);
   return {dest:$('f_dest').value.trim(),patientId:$('f_id').value.trim(),patientName:$('f_name').value.trim(),
     dobIso:$('f_dob').value,issuedIso:$('f_issued').value,dispIso:$('f_disp').value||KH.todayIso(),
-    half:$('f_half').checked,pharmList:pharmList(),doctor:$('f_doc').value.trim(),pharmacist:$('f_ph').value,remark:$('f_remark').value.trim(),
+    half:false,pharmList:pharmList(),doctor:$('f_doc').value.trim(),pharmacist:$('f_ph').value,remark:$('f_remark').value.trim(),
     items:items.map(function(i){return {rp:i.rp,name:i.name,after:i.after,maker:i.maker};})};
 }
 
@@ -10852,51 +10852,52 @@ function drawForm(ctx,d,K){
     ctx.fillText(t,xx,y*K);
   }
   function line(x1,y1,x2,y2,lw){ ctx.lineWidth=(lw||0.25)*K; ctx.beginPath(); ctx.moveTo(x1*K,y1*K); ctx.lineTo(x2*K,y2*K); ctx.stroke(); }
-  function rect(x,y,w,h,lw){ ctx.lineWidth=(lw||0.25)*K; ctx.strokeRect(x*K,y*K,w*K,h*K); }
-  var L=10,R=200;
-  txt('後発医薬品変更報告',L+14,16,6.5,{bold:true});
-  txt('報告書作成日　'+eraStr(d.dispIso),R,16,3.6,{align:'right'});
-  txt((d.dest||'')+'　御中',L,24.5,5);
-  txt('前略、日頃は大変お世話になっております。',L+2,30.5,3.5);
-  txt('下記患者様の処方せんについて、以下のとおり後発医薬品への変更が',L+2,35,3.5);
-  txt('ありましたのでご報告いたします。',L+2,39.5,3.5);
-  txt('早々',R-1,40,3.5,{align:'right'});
-  // patient table
-  var x1=L,x2=38,x3=108,x4=140,x5=R,ty=42, rows=[8,8,9];
-  var ys=[ty,ty+8,ty+16,ty+25];
-  rect(L,ty,R-L,25,0.4);
-  line(L,ys[1],R,ys[1]); line(L,ys[2],R,ys[2]);
-  [x2,x3,x4].forEach(function(x){ line(x,ty,x,ty+25); });
-  function cell(label,val,xl,xm,xr,y0,y1,opt){
-    txt(label,(xl+xm)/2,(y0+y1)/2+1.2,3.5,{align:'center',maxW:xm-xl-2});
-    txt(val,(xm+xr)/2,(y0+y1)/2+1.3,opt&&opt.size||3.8,{align:'center',maxW:xr-xm-3});
+  // 元のExcelの行の高さ(pt)をA4に収まる比率で使う
+  var PT=[36,27,19.5,33.75,21,28.5,28.5,28.5,27,45,45,108,27,27,27,27,27,27,27,27,27,31.5,31.5,31.5,31.5,31.5];
+  // index: 0:r1 1:r2 2:r3 3:r4 4:r5 5-7:r6-8 8:r9 9:r10 10:r11 11:r12-15 12:r16 13-17:r17-21 18:r22-23(54→2行) ...
+  var mmk=25.4/72*0.93, top=10;
+  var H={title:36,date:27,gap1:19.5,dest:33.75,gap2:21,g1:28.5,g2:28.5,g3:28.5,hayaku:27,r10:45,r11:45,blk:108,hdr:27,d:27,memo:54,gap3:27,p:31.5};
+  var y=top, Y={};
+  ['title','date','gap1','dest','gap2','g1','g2','g3','hayaku','r10','r11','blk','hdr'].forEach(function(k){ Y[k]=y; y+=H[k]*mmk; });
+  Y.d=[]; for(var i=0;i<5;i++){ Y.d.push(y); y+=H.d*mmk; }
+  Y.memo=y; y+=H.memo*mmk; Y.gap3=y; y+=H.gap3*mmk; Y.p=[]; for(i=0;i<5;i++){ Y.p.push(y); y+=H.p*mmk; }
+  var hh=function(k){return H[k]*mmk;};
+  var xA=10, xB=38.2, xC=50.4, xD=107, xE=146.3, xR=200.2; // A:B|C|D|E
+  var F=3.9, mid=function(y0,h){return y0+h/2+F*0.34;};
+  txt('後発医薬品変更報告',xA+12,mid(Y.title,hh('title')),6.4,{bold:true});
+  txt('報告書作成日',xD+3,mid(Y.date,hh('date')),F); txt(eraStr(d.dispIso),(xE+xR)/2,mid(Y.date,hh('date')),F,{align:'center'});
+  txt(d.dest||'',xA,mid(Y.dest,hh('dest')),5.2,{maxW:xD-xA-2}); txt('御中',xD+1,mid(Y.dest,hh('dest')),5.2);
+  txt('前略、日頃は大変お世話になっております。',xA+2,mid(Y.g1,hh('g1')),F);
+  txt('下記患者様の処方せんについて、以下のとおり後発医薬品への変更が',xA+2,mid(Y.g2,hh('g2')),F);
+  txt('ありましたのでご報告いたします。',xA+2,mid(Y.g3,hh('g3')),F);
+  txt('早々',xR-1,mid(Y.hayaku,hh('hayaku')),F,{align:'right'});
+  // table frame
+  var t0=Y.r10, t1=Y.memo+hh('memo');
+  line(xA,t0,xR,t0,0.45); line(xA,t1,xR,t1,0.45); line(xA,t0,xA,t1,0.45); line(xR,t0,xR,t1,0.45);
+  line(xA,Y.r11,xR,Y.r11); line(xA,Y.blk,xR,Y.blk); line(xA,Y.hdr,xR,Y.hdr,0.45); line(xA,Y.memo,xR,Y.memo,0.45);
+  [xC,xD,xE].forEach(function(x){ line(x,t0,x,Y.hdr); });
+  line(xD,Y.hdr,xD,Y.memo);
+  function cellRow(y0,h,l1,v1,l2,v2){
+    var m=mid(y0,h);
+    txt(l1,(xA+xC)/2,m,F,{align:'center',maxW:xC-xA-2}); txt(v1,(xC+xD)/2,m,F,{align:'center',maxW:xD-xC-3});
+    txt(l2,(xD+xE)/2,m,F,{align:'center',maxW:xE-xD-2}); txt(v2,(xE+xR)/2,m,F,{align:'center',maxW:xR-xE-3});
   }
-  cell('患者ＩＤ番号',d.patientId,x1,x2,x3,ys[0],ys[1]); cell('処方せん交付日',eraStr(d.issuedIso),x3,x4,x5,ys[0],ys[1]);
-  cell('患者氏名',d.patientName?d.patientName+'　様':'',x1,x2,x3,ys[1],ys[2]); cell('調剤年月日',eraStr(d.dispIso),x3,x4,x5,ys[1],ys[2]);
-  cell('生年月日',eraStr(d.dobIso),x1,x2,x3,ys[2],ys[3]); cell('処方医',d.doctor?d.doctor+'　先生':'',x3,x4,x5,ys[2],ys[3]);
-  // drug table
-  var dy=ty+25, mid=105;
-  rect(L,dy,R-L,36,0.4); line(mid,dy,mid,dy+36);
-  txt('処方医薬品',L+2,dy+4.2,3.5);
-  txt('変更後医薬品　（メーカー名）',mid+2,dy+4.2,3.5);
-  line(L,dy+6,R,dy+6);
-  for(var i=0;i<5;i++){
-    var it=d.items[i], yy=dy+6+i*6;
-    if(i>0) line(L,yy,R,yy,0.1);
-    if(it){
-      txt(KH.fwNum(it.rp)+'）'+it.name,L+2,yy+4.1,3.6,{maxW:mid-L-4});
-      if(it.after) txt(it.after+(it.maker?'（'+it.maker+'）':''),mid+2,yy+4.1,3.6,{maxW:R-mid-4});
-    }
+  cellRow(Y.r10,hh('r10'),'患者ＩＤ番号',d.patientId,'処方せん交付日',eraStr(d.issuedIso));
+  cellRow(Y.r11,hh('r11'),'患者氏名',d.patientName?d.patientName+'　様':'','調剤年月日',eraStr(d.dispIso));
+  cellRow(Y.blk,hh('blk'),'生年月日',eraStr(d.dobIso),'処方医',d.doctor?d.doctor+'　先生':'');
+  txt('処方医薬品',xA+1,mid(Y.hdr,hh('hdr')),F);
+  txt('変更後医薬品',xD+2,mid(Y.hdr,hh('hdr')),F); txt('（メーカー名）',xE+2,mid(Y.hdr,hh('hdr')),F);
+  for(i=0;i<5;i++){
+    var it=d.items[i]; if(!it) continue; var m=mid(Y.d[i],hh('d'));
+    txt(KH.fwNum(it.rp)+'）'+it.name,xA+1,m,F-0.2,{maxW:xD-xA-3});
+    if(it.after) txt(it.after+(it.maker?'（'+it.maker+'）':''),xD+2,m,F-0.2,{maxW:xR-xD-4});
   }
-  // remark
-  var ry=dy+36;
-  rect(L,ry,R-L,11,0.4);
-  txt('備考',L+2,ry+4,3.5);
-  if(d.remark) txt(d.remark,L+14,ry+4.2,3.5,{maxW:R-L-16});
-  // pharmacy
-  var py=ry+17;
-  PHARMACY.concat([['担当薬剤師名',d.pharmacist||'']]).forEach(function(p,i){
-    txt(p[0],L+20,py+i*4.8,3.4,{align:'right'}); txt(p[1],L+26,py+i*4.8,3.4);
+  txt('備考',xA+1,Y.memo+5,F);
+  if(d.remark) txt(d.remark,xA+14,Y.memo+5,F-0.2,{maxW:xR-xA-16});
+  var rows=PHARMACY.concat([['担当薬剤師名',d.pharmacist||'']]);
+  rows.forEach(function(p,i){
+    var m=mid(Y.p[i],hh('p'));
+    txt(p[0],(xA+xB)/2+4,m,F,{align:'center',maxW:xB-xA+10}); txt(p[1],xC+2,m,F+0.2,{maxW:xR-xC-4});
   });
 }
 function makePdf(jpeg,w,h){
