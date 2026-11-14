@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
 <title>後発医薬品変更報告書ツール</title>
 <style>
 :root{--ink:#1d2b36;--sub:#5b6b78;--line:#d9e1e7;--bg:#f4f7f9;--card:#fff;--acc:#0b7a75;--acc2:#e6f4f3;--warn:#b45309;--warnbg:#fff4e5;--bad:#b42318}
@@ -80,6 +81,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 <header>
   <h1>後発医薬品変更報告書</h1>
   <p class="lead">処方箋のQRコードから報告書（Excel）を作ります</p>
+  <p class="lead" id="VERSTAMP" style="font-size:12px;opacity:.8">版：2026-11-14 新文面（調剤日／作成日分離・番号付き）</p>
   <div class="stockbar"><span id="stockinfo"></span><label>在庫リストを更新<input id="stockfile" type="file" accept=".csv,.CSV,text/csv" hidden></label></div>
 </header>
 <main>
