@@ -72,6 +72,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 .camguide{position:absolute;left:50%;top:50%;width:min(80vw,64vh);height:min(80vw,64vh);transform:translate(-50%,-50%);border:3px solid #fff9;border-radius:18px;pointer-events:none}
 .cambot{position:absolute;left:0;right:0;bottom:0;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(#0000,#000b);color:#fff;text-align:center;font-size:13px}
 .cambot .big{margin-top:8px}.big.go{background:#16a34a}
+.resbox{background:var(--acc2);border-radius:12px;padding:12px;margin:12px 0}.rname{font-weight:600;margin-bottom:8px;word-break:break-all}a.big{text-decoration:none;text-align:center}.resbox .row2 .big{flex:1 1 140px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -125,6 +126,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
     <h2><span class="n">4</span>保存</h2>
     <button id="savepdf" class="big">印刷用PDFを保存（A4の上半分）</button>
     <p class="hint">保存すると表示される共有メニューの「プリント（印刷）」から、そのまま印刷できます。A4用紙の上半分に印刷されます。</p>
+    <div id="result" class="resbox" hidden></div>
     <label class="optline" style="margin-top:16px"><input id="f_half" type="checkbox" checked>Excelも上半分サイズにする</label>
     <button id="save" class="big alt">Excelを保存する</button>
     <p class="hint">Excelの場合は、保存したファイルをExcelアプリで開いて印刷します（拡大縮小は「なし」のままにしてください）。</p>
@@ -10920,6 +10922,33 @@ async function buildPdf(d){
   return makePdf(jpeg,c.width,c.height);
 }
 
+
+/* ---- 通常のブラウザ向け: 共有メニュー / ダウンロード ---- */
+var lastUrl=null;
+function showResult(blob,name,mime){
+  if(lastUrl) try{URL.revokeObjectURL(lastUrl);}catch(e){}
+  lastUrl=URL.createObjectURL(blob);
+  var box=$('result'); box.textContent=''; box.hidden=false;
+  box.appendChild(el('div',{class:'rname',text:name+' ができました'}));
+  var row=el('div',{class:'row2'});
+  var file=null; try{ file=new File([blob],name,{type:mime}); }catch(e){}
+  if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    row.appendChild(el('button',{class:'big',type:'button',text:'共有・印刷',onclick:function(){ navigator.share({files:[file],title:name}).catch(function(){}); }}));
+  }
+  row.appendChild(el('a',{class:'big alt',href:lastUrl,download:name,text:'ダウンロード'}));
+  if(mime==='application/pdf') row.appendChild(el('a',{class:'big alt',href:lastUrl,target:'_blank',rel:'noopener',text:'開いて印刷'}));
+  box.appendChild(row);
+  box.appendChild(el('p',{class:'hint',text:'「共有・印刷」から「プリント」を選ぶか、「開いて印刷」で表示したあと共有ボタンから印刷できます。'}));
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function deliverPlain(blob,name,mime){
+  var file=null; try{ file=new File([blob],name,{type:mime}); }catch(e){}
+  if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:name}); toast('共有メニューを開きました'); showResult(blob,name,mime); return; }
+    catch(e){ if(e&&e.name==='AbortError'){ showResult(blob,name,mime); return; } }
+  }
+  showResult(blob,name,mime);
+}
 async function deliver(kind){
   var d=gather(), problems=[];
   if(!d.dobIso) problems.push('生年月日'); if(!d.issuedIso) problems.push('処方せん交付日');
@@ -10928,10 +10957,11 @@ async function deliver(kind){
     var data,mime,name=fileName();
     if(kind==='pdf'){ data=await buildPdf(d); mime='application/pdf'; name=name.replace(/\.xlsx$/,'.pdf'); }
     else { data=await KH.buildXlsx(JSZip,TEMPLATE_B64,d); mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; }
-    var dl=(window.claude&&window.claude.use)?await window.claude.use('downloads'):null;
-    if(!dl){ toast('この画面ではファイル保存を使えません',true); return; }
-    await dl.save({filename:name,data:new Blob([data],{type:mime})});
-    toast('保存しました'); remember(d);
+    var blob=new Blob([data],{type:mime}), dl=null;
+    try{ dl=(window.claude&&window.claude.use)?await window.claude.use('downloads'):null; }catch(e){ dl=null; }
+    if(dl){ await dl.save({filename:name,data:blob}); toast('保存しました'); remember(d); return; }
+    remember(d);
+    await deliverPlain(blob,name,mime);
   }catch(e){
     if(e&&e.code==='declined') return;
     toast('保存できませんでした: '+((e&&e.message)||String(e)),true);
