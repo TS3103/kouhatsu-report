@@ -81,7 +81,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acc);outline-off
 <header>
   <h1>後発医薬品変更報告書</h1>
   <p class="lead">処方箋のQRコードから報告書（Excel）を作ります</p>
-  <p class="lead" id="VERSTAMP" style="font-size:12px;opacity:.8">版：2026-11-14 17:10 「一般名処方などに対して」反映</p>
+  <p class="lead" id="VERSTAMP" style="font-size:12px;opacity:.8">版：2026-11-14 21:20 処方薬を番号順に整列</p>
   <div class="stockbar"><span id="stockinfo"></span><label>在庫リストを更新<input id="stockfile" type="file" accept=".csv,.CSV,text/csv" hidden></label></div>
 </header>
 <main>
@@ -10317,6 +10317,7 @@ var KH = (function(){
       }
       else if(id==='281'){ notes[f[1]+'-'+f[2]]=f[5]||''; }
     });
+    out.drugs.sort(function(x,y){ return (parseInt(x.rp,10)||0)-(parseInt(y.rp,10)||0) || (parseInt(x.seq,10)||0)-(parseInt(y.seq,10)||0); });
     out.drugs.forEach(function(d){
       var r=rps[d.rp]||{}, u=usage[d.rp]||'', n=notes[d.rp+'-'+d.seq]||'';
       d.days=r.days||''; d.usage=u; d.note=n;
